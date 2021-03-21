@@ -1,0 +1,112 @@
+#Install Softwares
+- name: Install JDK and Hadoop in both NameNode & DataNode
+  hosts: all
+  vars_files:
+    - hadoop_vars.yml
+
+  tasks:
+  - name: Copying JDK rpm file
+    copy:
+       src: "/root/{{ jdk }}"
+       dest: "/root/"
+
+  - name: Installing JDK
+    command: "rpm -i {{ jdk }}"
+    ignore_errors: yes
+
+  - name: Copying Hadoop rpm file
+    copy:
+       src: "/root/{{ hadoop }}"
+       dest: "/root/"
+
+  - name: Installing Hadoop
+    command: "rpm -i {{ hadoop }} --force"
+    ignore_errors: yes
+
+
+#Start NameNode
+- name: Configure NameNode
+  hosts: namenode 
+  vars_files:
+    - hadoop_vars.yml
+
+  tasks:
+  - name: Creating NameNode folder
+    file:
+        dest: "{{ nn_dir }}"
+        state: directory
+ 
+  - name: Configuring hdfs-site.xml in NameNode
+    template: 
+       src: "/root/playbooks/hdfs-nn.xml"
+       dest: "/etc/hadoop/hdfs-site.xml"
+
+  - name: Configuring core-site.xml in NameNode
+    template:
+       src: "/root/playbooks/core.xml"
+       dest: "/etc/hadoop/core-site.xml"
+
+  - name: Formatting Namenode Folder
+    shell: "echo Y | hadoop namenode -format"
+
+  - name: Starting NameNode Service
+    command: "hadoop-daemon.sh start namenode"
+
+  - name: Stopping Firewall Service 
+    service:
+         name: "firewalld"
+         state: stopped
+  
+  - name: "Running JPS command to check services in NameNode"
+    command: "jps"
+    register: result
+
+  - name: "Printing JPS Output"
+    debug: 
+       var: result   
+
+
+#Start DataNode
+- name: Configure DataNode
+  hosts: datanode
+  vars_files:
+    - hadoop_vars.yml
+
+  tasks:
+  - name: Creating DataNode folder
+    file:
+        dest: "{{ dn_dir }}"
+        state: directory
+
+  - name: Configuring hdfs-site.xml in DataNode
+    template:
+       src: "/root/playbooks/hdfs-dn.xml"
+       dest: "/etc/hadoop/hdfs-site.xml"
+
+  - name: Configuring core-site.xml in DataNode
+    template:
+       src: "/root/playbooks/core.xml"
+       dest: "/etc/hadoop/core-site.xml"
+
+  - name: Stopping Firewall
+    service:
+        name: "firewalld"
+        state: stopped
+
+ 
+  - name: Starting DataNode Service
+    command: "hadoop-daemon.sh start datanode"
+
+  - name: "Running JPS command to check services in DataNode"
+    command: "jps"
+    register: result
+
+  - name: "Printing JPS Output"
+    debug:
+       var: result
+
+
+
+      
+
+
